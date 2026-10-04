@@ -1,8 +1,8 @@
 // Address tools: the only way agents read address data.
 import { BARANGAYS } from '../data/barangays.js';
+import { CITIES } from '../data/locations.js';
 import { LANDMARKS } from '../data/landmarks.js';
 import { DELIVERY_HISTORY } from '../data/history.js';
-import { OUTSIDE_COVERAGE } from '../data/coverage.js';
 import { normalise, digitsOnly } from '../core/util.js';
 import { hasStreetDetail } from '../core/validation.js';
 
@@ -13,48 +13,55 @@ const expandAbbreviations = (text) =>
     .replace(/\bsto\b/g, 'santo')
     .replace(/\bsta\b/g, 'santa')
     .replace(/\b(brgy|bgy|barangay)\b/g, ' ')
+    .replace(/[^a-z0-9ñ\s-]/g, ' ')
     .replace(/\s+/g, ' ');
 
-/** Barangays fully named in the text, longest name first. */
-export function findNamedBarangays(text) {
+const plain = (s) => normalise(s).replace(/ñ/g, 'n');
+const inCities = (city) => (city ? CITIES.filter((c) => c.name === city) : CITIES);
+
+export const listCities = () => CITIES.map((c) => c.name);
+export const getCity = (name) => CITIES.find((c) => c.name === name) || null;
+export const listBarangays = (city) => getCity(city)?.barangays || [];
+
+/** Cities named in the text, by name or common alias (e.g. "QC"). */
+export function findCities(text) {
   const t = ` ${expandAbbreviations(text)} `;
-  return BARANGAYS
-    .filter((b) => t.includes(` ${normalise(b.name)} `))
-    .sort((a, b) => b.name.length - a.name.length)
-    .map((b) => b.name);
+  return CITIES.filter((c) => [c.name, ...c.aliases].some((a) => t.includes(` ${normalise(a)} `))).map((c) => c.name);
 }
 
-/** Barangays sharing a partial name that appears in the text, e.g. "lourdes" or "pulung". */
-export function findPartialBarangays(text) {
+/** Barangays fully named in the text as { city, barangay }, longest name first. Optionally within one city. */
+export function findNamedBarangays(text, city = null) {
+  const t = ` ${plain(expandAbbreviations(text))} `;
+  return inCities(city)
+    .flatMap((c) => c.barangays.map((b) => ({ city: c.name, barangay: b })))
+    .filter(({ barangay }) => t.includes(` ${plain(barangay)} `))
+    .sort((a, b) => b.barangay.length - a.barangay.length);
+}
+
+/** Barangays in one city sharing a partial name found in the text, e.g. "Lourdes" or "Pulung". */
+export function findPartialBarangays(text, city) {
   const words = new Set(expandAbbreviations(text).split(' ').filter((w) => w.length >= 4));
   const families = new Map();
-  for (const b of BARANGAYS) {
-    const first = normalise(b.name).split(' ')[0];
-    if (words.has(first)) families.set(first, [...(families.get(first) || []), b.name]);
-  }
+  listBarangays(city).forEach((b) => {
+    const first = plain(b).split(' ')[0];
+    if (words.has(first)) families.set(first, [...(families.get(first) || []), b]);
+  });
   return [...families.values()].find((list) => list.length > 1) || [];
 }
 
-/** Known landmark mentioned in the text, with its barangay. */
+/** Known landmark mentioned in the text, with its city and barangay. */
 export function matchLandmark(text) {
   const t = normalise(text);
   return LANDMARKS.find((l) => l.keys.some((k) => t.includes(k))) || null;
 }
-
 
 /** Last successful delivery address for a phone number, if any. */
 export function getPastDelivery(phone) {
   return DELIVERY_HISTORY[digitsOnly(phone)] || null;
 }
 
-export const listBarangays = () => BARANGAYS.map((b) => b.name).sort();
-export const getBarangay = (name) => BARANGAYS.find((b) => b.name === name) || null;
-
-/** Place outside the branch's coverage mentioned in the text, if any. */
-export function findOutsideCoverage(text) {
-  const t = ` ${normalise(text)} `;
-  return OUTSIDE_COVERAGE.find((c) => c.keys.some((k) => t.includes(` ${normalise(k)} `))) || null;
-}
+/** A barangay in the riders' delivery area (with its rider area and map position). */
+export const getDeliveryAreaBarangay = (name) => BARANGAYS.find((b) => b.name === name) || null;
 
 /** Descriptive details riders look for, e.g. "blue gate", "yellow house". */
 export function extractDescriptors(text) {

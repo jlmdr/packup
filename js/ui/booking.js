@@ -2,9 +2,10 @@
 // Plain validation owns the rules (required fields, a barangay from the list);
 // the intake agent handles the judgement calls on top.
 import { agents } from '../agents/index.js';
-import { listBarangays, getPastDelivery } from '../tools/address-tools.js';
+import { listCities, listBarangays, getPastDelivery } from '../tools/address-tools.js';
+import { deliveryZone, estimateRate } from '../core/pricing.js';
 import {
-  validateMobile, validateName, validateStreet, validateBarangay, validateItem, validateWeight, validateSize,
+  validateMobile, validateName, validateStreet, validateCity, validateBarangay, validateItem, validateWeight, validateSize,
   validateDifferentNumbers, addressTooThin, intakeReviewReason,
 } from '../core/validation.js';
 import { store } from '../core/store.js';
@@ -12,19 +13,24 @@ import { RATE_TABLE, RATE_ZONES } from '../data/rates.js';
 import { formatPhone } from '../core/util.js';
 import { $, on, esc, agentNote, toast } from './dom.js';
 
-const BARANGAYS = listBarangays();
+const CITIES = listCities();
+const cityOptions = (selected = '') => `<option value="">Choose city</option>${CITIES.map((c) => `<option${c === selected ? ' selected' : ''}>${esc(c)}</option>`).join('')}`;
+const barangayOptions = (city, selected = '') => (city
+  ? `<option value="">Choose barangay</option>${listBarangays(city).map((b) => `<option${b === selected ? ' selected' : ''}>${esc(b)}</option>`).join('')}`
+  : '<option value="">Choose a city first</option>');
 
 const EXAMPLES = [
-  { label: 'Which Lourdes?', recipient: 'Ella Cunanan', phone: '0917 555 0102', street: '12 Sampaguita St.', landmark: 'Near the church, Lourdes', item: '1 pair of shoes', weight: 1 },
+  { label: 'Which Lourdes?', recipient: 'Ella Cunanan', phone: '0917 555 0102', street: '12 Sampaguita St.', city: 'Angeles City', landmark: 'Near the church, Lourdes', item: '1 pair of shoes', weight: 1 },
   { label: 'Returning recipient', recipient: 'Ana Dizon', phone: '0917 555 0188', item: 'Rice cooker', weight: 3.5, size: 'medium' },
   { label: 'Landmark in Filipino', recipient: 'Joey Pamintuan', phone: '0917 555 0109', street: 'Blk 3 Lot 9', landmark: 'Tapat ng Marquee Mall, blue gate', item: 'Perfume and lotion', weight: 0.8 },
-  { label: 'Barangay mismatch', recipient: 'Rose Lansangan', phone: '0917 555 0111', street: 'Blk 3 Lot 9', barangay: 'Balibago', landmark: 'Tapat ng Marquee Mall', item: 'Documents', weight: 0.3 },
-  { label: 'Outside coverage', recipient: 'Mark Dayrit', phone: '0917 555 0114', street: 'Blk 2 Lot 4, Dau, Mabalacat', item: 'Clothes', weight: 1.2 },
-  { label: 'Item not accepted', recipient: 'Lito Bernal', phone: '0917 555 0115', street: '9 Henson St.', barangay: 'Santo Cristo', item: 'Live crabs', weight: 2 },
-  { label: 'Clean address', recipient: 'Carla Yap', phone: '0917 555 0110', street: 'Blk 5 Lot 12, Sampaguita St.', barangay: 'Santo Rosario', item: 'Phone case', weight: 0.2 },
+  { label: 'Barangay mismatch', recipient: 'Rose Lansangan', phone: '0917 555 0111', street: 'Blk 3 Lot 9', city: 'Angeles City', barangay: 'Balibago', landmark: 'Tapat ng Marquee Mall', item: 'Documents', weight: 0.3 },
+  { label: 'Sending to Manila', recipient: 'Mark Dayrit', phone: '0917 555 0114', street: '45 Real St., Intramuros', item: 'Clothes', weight: 1.2 },
+  { label: 'Which Dolores?', recipient: 'Nica Bautista', phone: '0917 555 0116', street: 'Purok 4, Dolores', item: 'Books', weight: 2.5 },
+  { label: 'Item not accepted', recipient: 'Lito Bernal', phone: '0917 555 0115', street: '9 Henson St.', city: 'Angeles City', barangay: 'Santo Cristo', item: 'Live crabs', weight: 2 },
+  { label: 'Clean address', recipient: 'Carla Yap', phone: '0917 555 0110', street: 'Blk 5 Lot 12, Sampaguita St.', city: 'Angeles City', barangay: 'Santo Rosario', item: 'Phone case', weight: 0.2 },
 ];
 
-const HELP_EXAMPLES = ['Can I send perfume?', 'How much for 4 kg?', 'I’m near Marquee Mall, what’s my barangay?', 'Do you deliver to Mabalacat?'];
+const HELP_EXAMPLES = ['Can I send perfume?', 'How much for 4 kg to Cebu?', 'I’m near Marquee Mall, what’s my barangay?', 'Do you deliver to Davao?'];
 
 let el;
 let form;
@@ -37,8 +43,8 @@ const flags = { pastDismissed: false, conflictKept: false, newAddress: false, du
 const timers = {};
 
 const SIZE_LABEL = { small: 'Small', medium: 'Medium', large: 'Large' };
-const fields = () => ({ street: form.street.value, barangay: form.barangay.value, landmark: form.landmark.value, phone: form.phone.value });
-const compose = (f) => [f.street, f.barangay].filter(Boolean).join(', ');
+const fields = () => ({ street: form.street.value, city: form.city.value, barangay: form.barangay.value, landmark: form.landmark.value, phone: form.phone.value });
+const compose = (f) => [f.street, f.barangay, f.city].filter(Boolean).join(', ');
 
 const fieldHtml = (name, label, input) =>
   `<div class="field"><label for="f-${name}">${label}</label>${input}<span class="field-error" id="err-${name}"></span></div>`;
@@ -58,6 +64,7 @@ function template() {
           ${fieldHtml('sender', 'Sender name', '<input id="f-sender" name="sender" autocomplete="name" aria-describedby="err-sender">')}
           ${fieldHtml('senderPhone', 'Sender mobile (optional)', '<input id="f-senderPhone" name="senderPhone" inputmode="tel" placeholder="09XX XXX XXXX" aria-describedby="err-senderPhone">')}
         </div>
+        ${fieldHtml('senderCity', 'Sending from (city)', `<select id="f-senderCity" name="senderCity" aria-describedby="err-senderCity">${cityOptions()}</select>`)}
       </div>
       <div class="label-section">
         <h2>To</h2>
@@ -67,9 +74,8 @@ function template() {
         </div>
         ${fieldHtml('street', 'House, lot or street', '<input id="f-street" name="street" placeholder="e.g. Blk 5 Lot 12, Sampaguita St." aria-describedby="err-street">')}
         <div class="field-row">
-          ${fieldHtml('barangay', 'Barangay', `<select id="f-barangay" name="barangay" aria-describedby="err-barangay">
-              <option value="">Choose barangay</option>${BARANGAYS.map((b) => `<option>${esc(b)}</option>`).join('')}</select>`)}
-          <div class="field"><label>City</label><p class="static-value">Angeles City, Pampanga</p></div>
+          ${fieldHtml('city', 'City', `<select id="f-city" name="city" aria-describedby="err-city">${cityOptions()}</select>`)}
+          ${fieldHtml('barangay', 'Barangay', `<select id="f-barangay" name="barangay" aria-describedby="err-barangay">${barangayOptions('')}</select>`)}
         </div>
         ${fieldHtml('landmark', 'Landmark (optional)', '<input id="f-landmark" name="landmark" placeholder="e.g. tapat ng simbahan, blue gate" aria-describedby="err-landmark">')}
         <div id="agent-slot" class="agent-slot" aria-live="polite"></div>
@@ -88,7 +94,7 @@ function template() {
       </div>
       <div id="submit-slot" aria-live="polite"></div>
       <div class="label-foot">
-        <span class="muted small">You get a reference code as soon as you book.</span>
+        <span class="muted small" id="fee-estimate">You get a reference code as soon as you book.</span>
         <button class="btn btn--primary" type="submit">Book parcel</button>
       </div>
     </form>
@@ -99,7 +105,7 @@ function template() {
         <div class="panel-title"><h2 id="help-title">Need help?</h2></div>
         <form class="ask-form" id="help-form">
           <label class="visually-hidden" for="help-input">Ask a booking question</label>
-          <input id="help-input" class="control" placeholder="Ask about items, rates, coverage or your address" autocomplete="off">
+          <input id="help-input" class="control" placeholder="Ask about items, rates, destinations or your address" autocomplete="off">
           <button class="btn btn--primary" type="submit">Ask</button>
         </form>
         <div class="chips">${HELP_EXAMPLES.map((x, i) => `<button type="button" class="chip" data-help="${i}">${esc(x)}</button>`).join('')}</div>
@@ -133,8 +139,10 @@ const RULES = {
   },
   recipient: () => validateName(form.recipient.value, 'recipient name'),
   phone: () => validateMobile(form.phone.value),
+  senderCity: () => validateCity(form.senderCity.value, CITIES, 'city you’re sending from'),
   street: () => validateStreet(form.street.value),
-  barangay: () => validateBarangay(form.barangay.value, BARANGAYS),
+  city: () => validateCity(form.city.value, CITIES),
+  barangay: () => validateBarangay(form.barangay.value, listBarangays(form.city.value)),
   item: () => validateItem(form.item.value),
   weight: () => validateWeight(form.weight.value),
   size: () => validateSize(form.size.value, form.weight.value),
@@ -188,8 +196,8 @@ async function runAddressCheck() {
   const decision = await agents.intake.checkAddress(fields(), { ...flags });
   if (run !== runs.address) return null; // the customer kept typing; a newer check is on its way
   if (decision.status === 'auto') {
-    form.barangay.value = decision.barangay;
-    validateField('barangay');
+    setPlace(decision.city, decision.barangay);
+    ['city', 'barangay'].forEach((n) => { if (form[n].value) validateField(n); });
   }
   riderNote = ['clear', 'auto'].includes(decision.status) ? (await agents.intake.writeRiderNote(noteDetails())).note : '';
   if (run !== runs.address) return null;
@@ -213,12 +221,31 @@ function scheduleAddressCheck(immediate = false) {
   debounce('address', () => { showThinking('address', renderAddress); runAddressCheck(); }, 650);
 }
 
+function setPlace(city, barangay = '') {
+  if (city && form.city.value !== city) {
+    form.city.value = city;
+    form.barangay.innerHTML = barangayOptions(city);
+  }
+  if (barangay) form.barangay.value = barangay;
+  updateFee();
+}
+
 function applyAddress(value) {
   if (value.street !== undefined) form.street.value = value.street;
   if (value.landmark !== undefined) form.landmark.value = value.landmark;
-  if (value.barangay) form.barangay.value = value.barangay;
-  ['street', 'barangay'].forEach(validateField);
+  setPlace(value.city, value.barangay);
+  ['street', 'city', 'barangay'].forEach(validateField);
   return runAddressCheck();
+}
+
+/** Estimated fee from the rate table: a rule, recalculated whenever the cities or weight change. */
+function updateFee() {
+  const zone = deliveryZone(form.senderCity.value, form.city.value);
+  const kg = Number(form.weight.value);
+  const box = $('#fee-estimate', el);
+  if (zone === null || !(kg > 0)) { box.textContent = 'You get a reference code as soon as you book.'; return; }
+  const r = estimateRate(kg, zone);
+  box.innerHTML = `Estimated fee: <strong>₱${r.amount}</strong> (${esc(r.zone.toLowerCase())})`;
 }
 
 // Item agent ---------------------------------------------------------------------------
@@ -251,8 +278,8 @@ function renderHelp() {
   const who = '<span class="agent-who">Booking help</span>';
   if (!help) { slot.innerHTML = ''; return; }
   if (help.thinking) { slot.innerHTML = agentNote(`${who}<p><span class="agent-thinking"><i></i><i></i><i></i></span></p>`); return; }
-  const action = help.action?.type === 'fill-barangay'
-    ? `<div class="agent-actions"><button type="button" class="option-btn" data-help-fill="${esc(help.action.barangay)}">Use ${esc(help.action.barangay)} in the form</button></div>` : '';
+  const action = help.action?.type === 'fill-address'
+    ? `<div class="agent-actions"><button type="button" class="option-btn" data-help-fill>Use ${esc(help.action.barangay)}, ${esc(help.action.city)} in the form</button></div>` : '';
   slot.innerHTML = agentNote(`${who}<p>${esc(help.message)}</p>${action}`);
 }
 
@@ -260,7 +287,7 @@ async function askHelp(question) {
   const run = ++runs.help;
   $('#help-input', el).value = question;
   help = { thinking: true }; renderHelp();
-  const reply = await agents.intake.answerQuestion(question);
+  const reply = await agents.intake.answerQuestion(question, { fromCity: form.senderCity.value });
   if (run !== runs.help) return;
   help = reply;
   renderHelp();
@@ -315,7 +342,7 @@ async function book() {
   if (tooThin) { address = { status: 'blocked', message: tooThin }; renderAddress(); stopAt(form.street); return; }
 
   // 4. Agent: duplicate check.
-  const dup = flags.dupOk ? null : await agents.intake.checkDuplicate({ phone: f.phone, barangay: f.barangay, street: f.street });
+  const dup = flags.dupOk ? null : await agents.intake.checkDuplicate({ phone: f.phone, city: f.city, barangay: f.barangay, street: f.street });
   if (dup) {
     $('#submit-slot', el).innerHTML = `<div class="label-section">${agentNote(`<span class="agent-who">Duplicate check</span><p>${esc(dup.message)}</p>
       <div class="agent-actions"><button type="button" class="option-btn" data-action="dup-new">Yes, book a new parcel</button>
@@ -325,15 +352,17 @@ async function book() {
   }
 
   // 5. Book. Risky addresses go to intake review; the customer still gets a code.
-  const reason = intakeReviewReason({ ...flags, barangay: f.barangay, pastBarangay: getPastDelivery(f.phone)?.barangay });
+  const past = getPastDelivery(f.phone);
+  const reason = intakeReviewReason({ ...flags, place: `${f.barangay}, ${f.city}`, pastPlace: past && `${past.barangay}, ${past.city}` });
   const flag = reason ? { type: 'intake', reason } : null;
   const tags = itemDecision.tags || [];
-  const typed = [f.street, f.barangay, f.landmark].filter(Boolean).join(', ');
+  const typed = [f.street, f.barangay, f.city, f.landmark].filter(Boolean).join(', ');
   const { note } = await agents.intake.writeRiderNote(noteDetails(tags));
   const parcel = store.createBooking({
     recipient: form.recipient.value.trim(),
     phone: f.phone.trim(),
     street: f.street.trim(),
+    city: f.city,
     barangay: f.barangay,
     landmark: f.landmark.trim(),
     size: form.size.value,
@@ -341,6 +370,7 @@ async function book() {
     item: form.item.value.trim(),
     handling: tags,
     sender: form.sender.value.trim(),
+    senderCity: form.senderCity.value,
     typedAddress: typed,
     riderNote: note,
   }, flag);
@@ -352,7 +382,7 @@ async function book() {
       ${barcode(parcel.ref)}
       <dl>
         <dt>Recipient</dt><dd>${esc(parcel.recipient)}, ${esc(formatPhone(parcel.phone))}</dd>
-        <dt>Address</dt><dd>${esc(compose(parcel))}, Angeles City</dd>
+        <dt>Address</dt><dd>${esc(compose(parcel))}</dd>
         <dt>Contents</dt><dd>${esc(parcel.item)}${tags.length ? ` ${tags.map((t) => `<span class="tag tag--muted">${t}</span>`).join(' ')}` : ''}</dd>
         <dt>Rider note</dt><dd>${esc(parcel.riderNote)}</dd>
       </dl>
@@ -365,6 +395,8 @@ async function book() {
 
 function resetForm() {
   form.reset();
+  form.barangay.innerHTML = barangayOptions('');
+  updateFee();
   Object.keys(RULES).forEach((n) => showFieldError(n, { ok: true }));
   Object.keys(flags).forEach((k) => { flags[k] = false; });
   Object.keys(runs).forEach((k) => { runs[k] += 1; });
@@ -384,7 +416,15 @@ export function mount(root) {
     if (n !== 'phone') flags.conflictKept = false;
     scheduleAddressCheck();
   }));
+  form.city.addEventListener('change', () => {
+    form.barangay.innerHTML = barangayOptions(form.city.value);
+    flags.conflictKept = false;
+    updateFee();
+    scheduleAddressCheck(true);
+  });
   form.barangay.addEventListener('change', () => { flags.conflictKept = false; scheduleAddressCheck(true); });
+  form.senderCity.addEventListener('change', updateFee);
+  form.weight.addEventListener('input', updateFee);
   form.item.addEventListener('input', scheduleItemCheck);
 
   // Rules: check on leaving a field, re-check live once it has an error.
@@ -407,24 +447,27 @@ export function mount(root) {
 
   on(el, 'submit', '#help-form', (e) => { e.preventDefault(); askHelp($('#help-input', el).value); });
   on(el, 'click', '[data-help]', (_, btn) => askHelp(HELP_EXAMPLES[Number(btn.dataset.help)]));
-  on(el, 'click', '[data-help-fill]', (_, btn) => {
-    applyAddress({ barangay: btn.dataset.helpFill });
+  on(el, 'click', '[data-help-fill]', () => {
+    const { city, barangay } = help.action;
+    applyAddress({ city, barangay });
     form.barangay.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    toast(`Barangay set to ${btn.dataset.helpFill}.`);
+    toast(`Address set to ${barangay}, ${city}.`);
   });
 
   on(el, 'click', '[data-example]', (_, btn) => {
     const x = EXAMPLES[Number(btn.dataset.example)];
     resetForm();
     form.sender.value = 'Demo Sender';
+    form.senderCity.value = 'Angeles City';
     form.recipient.value = x.recipient;
     form.phone.value = x.phone;
     form.street.value = x.street || '';
-    form.barangay.value = x.barangay || '';
+    setPlace(x.city || '', x.barangay || '');
     form.landmark.value = x.landmark || '';
     form.item.value = x.item;
     form.weight.value = x.weight;
     form.size.value = x.size || 'small';
+    updateFee();
     $('#confirmation', el).innerHTML = '';
     form.street.scrollIntoView({ behavior: 'smooth', block: 'center' });
     scheduleAddressCheck();

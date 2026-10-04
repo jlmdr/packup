@@ -3,6 +3,7 @@
 import { findParcels } from '../tools/parcel-tools.js';
 import { getRider, getRiderLocation } from '../tools/rider-tools.js';
 import { normalise } from '../core/util.js';
+import { DELIVERY_AREA_CITY } from '../data/barangays.js';
 
 export const MONEY_POLICY = ['refund', 'compensation', 'reimburse', 'money back', 'charge back', 'bayad', 'discount', 'free shipping'];
 export const NOT_RECEIVED = ['not received', "didn't receive", 'did not receive', 'never received', 'never got', "didn't get", 'hindi natanggap', 'hindi ko natanggap', 'wala pa'];
@@ -16,7 +17,11 @@ function describe(parcel) {
   const last = parcel.history[parcel.history.length - 1];
   switch (parcel.status) {
     case 'ready':
-      return { summary: 'Booked and waiting for today’s dispatch.', reply: 'It’s booked and will be assigned to a rider in today’s dispatch.' };
+      return parcel.city === DELIVERY_AREA_CITY
+        ? { summary: 'Booked and waiting for today’s dispatch.', reply: 'It’s booked and will be assigned to a rider in today’s dispatch.' }
+        : { summary: `Booked; goes to the hub today for delivery in ${parcel.city}.`, reply: `It’s booked and leaves for our hub today, on its way to ${parcel.city}.` };
+    case 'outbound':
+      return { summary: `Sent to the hub for delivery in ${parcel.city}.`, reply: `It has left our branch and is on its way to ${parcel.city}, where our team there will deliver it.` };
     case 'flagged':
       return { summary: 'On hold while our team confirms the address.', reply: 'Our team is confirming the delivery address before it goes out. We may call to check a detail.' };
     case 'assigned':

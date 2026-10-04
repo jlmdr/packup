@@ -1,5 +1,7 @@
-// Angeles City barangays, grouped into rider areas.
-// Coordinates are for the schematic map only (viewBox 1000 x 700), not real geography.
+// The delivery area used by the prototype's riders and map (sample data).
+// Barangays are grouped into rider areas; coordinates are for the schematic map only (viewBox 1000 x 700).
+
+export const DELIVERY_AREA_CITY = 'Angeles City';
 
 export const AREAS = {
   north: { id: 'north', name: 'North', neighbours: ['central', 'west', 'east'] },

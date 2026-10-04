@@ -142,3 +142,6 @@
 .drawer-section:first-of-type { border-top: 0; }
 .drawer ol { display: grid; gap: var(--space-1); margin: 0; padding-left: 18px; font-size: var(--text-md); color: var(--ink-soft); }
 .drawer .control { width: 100%; }
+
+/* Dispatch: parcels for other cities */
+.outbound { border-color: var(--brand); }

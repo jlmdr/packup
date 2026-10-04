@@ -3,7 +3,7 @@
 const ANSWERS = {
   'intake.screenItem': { status: 'clear' },
   'intake.writeRiderNote': null, // built from the request below
-  'intake.answerQuestion': { message: '(mock model) I can help with items, rates, coverage and addresses.' },
+  'intake.answerQuestion': { message: '(mock model) I can help with items, rates, destinations and addresses.' },
   'deliveryStatus.answer': { kind: 'not_found', message: '(mock model) I could not find that parcel.' },
 };
 const FIRST_TOOL_INPUT = { text: 'Angeles City' };

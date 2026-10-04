@@ -25,7 +25,7 @@ export function toast(message, tone = '') {
 
 const STATUS_LABELS = {
   ready: 'Booked', flagged: 'Needs review', assigned: 'Assigned',
-  out: 'Out for delivery', delivered: 'Delivered', failed: 'Failed attempt',
+  out: 'Out for delivery', delivered: 'Delivered', failed: 'Failed attempt', outbound: 'Sent to hub',
 };
 export const statusBadge = (status) => `<span class="badge" data-status="${status}">${STATUS_LABELS[status] || status}</span>`;
 

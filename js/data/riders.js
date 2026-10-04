@@ -1,4 +1,4 @@
-// Rider roster for the Angeles City branch.
+// Rider roster for the delivery area (sample data).
 // Capacity is kept small so the demo shows workload balancing clearly.
 export const VEHICLES = {
   motorcycle: { label: 'Motorcycle', capacity: 10, sizes: ['small', 'medium'] },

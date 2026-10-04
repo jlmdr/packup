@@ -47,9 +47,9 @@ function render(state) {
     <div class="drawer-section">
       <h3>Suggested demo</h3>
       <ol>
-        <li>Book with “Landmark in Filipino”, then try “Barangay mismatch” and “Outside coverage”.</li>
+        <li>Book with “Landmark in Filipino”, then try “Barangay mismatch” and “Sending to Manila”.</li>
         <li>Confirm the flagged bookings in Intake review.</li>
-        <li>Run the morning assignment and approve it.</li>
+        <li>Run the morning assignment, approve it, and hand the outbound parcels to the hub.</li>
         <li>Start deliveries, then report a failed attempt.</li>
         <li>Ask the delivery status agent about that parcel.</li>
       </ol>

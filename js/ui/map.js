@@ -1,4 +1,4 @@
-// Schematic map of Angeles City: barangays, hub, stops and live rider markers.
+// Schematic map of the riders' delivery area: barangays, hub, stops and live rider markers.
 // Production would use Google Maps; the POC draws its own SVG.
 import { BARANGAYS, HUB, AREAS } from '../data/barangays.js';
 import { stopPosition } from '../core/simulation.js';
@@ -6,7 +6,7 @@ import { esc, initials } from './dom.js';
 
 export function renderMap(container) {
   container.innerHTML = `
-  <svg class="map-svg" viewBox="0 0 1000 700" role="img" aria-label="Schematic map of Angeles City with rider positions">
+  <svg class="map-svg" viewBox="0 0 1000 700" role="img" aria-label="Schematic map of the delivery area with rider positions">
     <defs>
       <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
         <path d="M40 0H0V40" fill="none" stroke="var(--line)" stroke-width="0.6"/>

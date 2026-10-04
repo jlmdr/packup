@@ -3,7 +3,7 @@ import { store } from '../core/store.js';
 import { agents } from '../agents/index.js';
 import { startDeliveries } from '../core/simulation.js';
 import { getAllRiders, getAvailableRiders, areaName, vehicleLabel, vehicleCapacity, vehicleFits } from '../tools/rider-tools.js';
-import { getParcel, getParcelsForBatch } from '../tools/parcel-tools.js';
+import { getParcel, getParcelsForBatch, getOutboundParcels } from '../tools/parcel-tools.js';
 import { on, esc, toast, ICONS, initials, agentNote } from './dom.js';
 import { AREAS } from '../data/barangays.js';
 
@@ -45,6 +45,22 @@ function attentionList(items, canAssign) {
   </section>`;
 }
 
+function outboundPanel(state) {
+  const waiting = getOutboundParcels();
+  const sent = state.parcels.filter((p) => p.status === 'outbound').length;
+  if (!waiting.length && !sent) return '';
+  const byCity = Object.entries(waiting.reduce((acc, p) => ({ ...acc, [p.city]: (acc[p.city] || 0) + 1 }), {}))
+    .map(([city, n]) => `${esc(city)} (${n})`).join(', ');
+  return `
+  <section class="panel outbound" aria-labelledby="out-title">
+    <div class="panel-title"><h2 id="out-title">Outbound to hub</h2>${sent ? `<span class="muted small">${sent} sent today</span>` : ''}</div>
+    ${waiting.length ? `
+      <p class="small">${waiting.length} parcel${waiting.length > 1 ? 's' : ''} for other cities: ${byCity}. These travel by long-haul from the hub, so they skip local rider assignment.</p>
+      <div class="actions-bar panel-note"><button class="btn btn--ghost btn--sm" data-action="hub">Hand over to hub</button></div>`
+      : '<p class="muted small">All parcels for other cities have been handed to the hub.</p>'}
+  </section>`;
+}
+
 function riderColumns(state) {
   const plan = state.plan;
   return `<div class="rider-grid">${getAllRiders().map((r) => {
@@ -80,13 +96,15 @@ function render(state) {
   if (phase === 'morning') {
     body = `
       <section class="panel summary-strip">
-        <div><b>${batch.length}</b><span>parcels before cut-off</span></div>
+        <div><b>${batch.length}</b><span>local parcels before cut-off</span></div>
         <div><b>${available} of ${riders.length}</b><span>riders available</span></div>
+        <div><b>${getOutboundParcels().length}</b><span>for other cities</span></div>
         <div><b>${Object.keys(AREAS).length}</b><span>delivery areas</span></div>
       </section>
       ${thinking ? agentNote('<span class="agent-who">Rider assignment</span><p>Matching parcels to areas, vehicles and workloads <span class="agent-thinking"><i></i><i></i><i></i></span></p>') : ''}
       <div class="actions-bar"><button class="btn btn--accent" data-action="plan" ${thinking ? 'disabled' : ''}>Run morning assignment</button>
       <span class="muted small">The agent drafts the plan. Nothing goes to riders until you approve.</span></div>
+      ${outboundPanel(state)}
       ${riderColumns(state)}`;
   } else if (phase === 'planned') {
     body = `
@@ -96,6 +114,7 @@ function render(state) {
         <button class="btn btn--primary" data-action="approve">Approve and release to riders</button>
         <button class="btn btn--ghost" data-action="discard">Discard plan</button>
       </div>
+      ${outboundPanel(state)}
       ${riderColumns(state)}`;
   } else {
     body = `
@@ -103,6 +122,7 @@ function render(state) {
       <div class="actions-bar">
         ${phase === 'released' ? '<button class="btn btn--accent" data-action="start">Start deliveries</button><span class="muted small">Riders leave the hub and appear on the tracking map.</span>' : '<a class="btn btn--ghost" href="#tracking">Open tracking map</a><span class="muted small">Deliveries in progress.</span>'}
       </div>
+      ${outboundPanel(state)}
       ${riderColumns(state)}`;
   }
 
@@ -123,6 +143,11 @@ export function mount(root) {
     const plan = await agents.assignment.planBatch();
     thinking = false;
     store.setPlan(plan);
+  });
+  on(el, 'click', '[data-action=hub]', () => {
+    const refs = getOutboundParcels().map((p) => p.ref);
+    store.sendToHub(refs);
+    toast(`${refs.length} parcel${refs.length > 1 ? 's' : ''} handed to the hub.`);
   });
   on(el, 'click', '[data-action=approve]', () => { store.releasePlan(); toast('Plan approved and released to riders.'); });
   on(el, 'click', '[data-action=discard]', () => store.setPlan(null));

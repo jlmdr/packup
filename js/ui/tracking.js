@@ -74,7 +74,7 @@ function render(state) {
     </div>
     <div class="split split--map">
       <section class="panel map-panel" aria-labelledby="map-title">
-        <div class="panel-title"><h2 id="map-title">Angeles City</h2>
+        <div class="panel-title"><h2 id="map-title">Delivery area</h2>
           <span class="muted small" id="map-caption">${delivering ? 'Deliveries in progress' : 'Riders appear once dispatch starts deliveries'}</span></div>
         <div id="map"></div>
       </section>

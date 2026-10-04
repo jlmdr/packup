@@ -45,15 +45,21 @@ export function addressTooThin({ street = '', landmark = '' }) {
 }
 
 /** Why staff should check a booking before dispatch, if at all. */
-export function intakeReviewReason({ conflictKept, newAddress, barangay, pastBarangay }) {
-  if (conflictKept) return 'The landmark points to a different barangay, and the customer kept their choice. Call to confirm.';
-  if (newAddress) return `New address in ${barangay}; the last successful delivery was in ${pastBarangay}. Call to confirm.`;
+export function intakeReviewReason({ conflictKept, newAddress, place, pastPlace }) {
+  if (conflictKept) return 'The address text points to a different place than the one selected, and the customer kept their choice. Call to confirm.';
+  if (newAddress) return `New address in ${place}; the last successful delivery was in ${pastPlace}. Call to confirm.`;
   return null;
+}
+
+export function validateCity(value = '', allowed = [], label = 'city') {
+  if (!value) return fail(`Choose the ${label}.`);
+  if (allowed.length && !allowed.includes(value)) return fail(`Choose a ${label} from the list.`);
+  return ok();
 }
 
 export function validateBarangay(value = '', allowed = []) {
   if (!value) return fail('Choose the barangay.');
-  if (allowed.length && !allowed.includes(value)) return fail('Choose a barangay from the list.');
+  if (!allowed.includes(value)) return fail('Choose a barangay from the list.');
   return ok();
 }
 

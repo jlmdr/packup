@@ -16,7 +16,7 @@ const SIMULATED = {
   'intake.checkAddress': { latency: 450, run: ({ fields, flags }) => checkAddressFields(fields, flags) },
   'intake.screenItem': { latency: 350, run: ({ description }) => screenItem(description) },
   'intake.writeRiderNote': { latency: 0, run: (input) => ({ note: writeRiderNote(input) }) },
-  'intake.answerQuestion': { latency: 450, run: ({ question }) => answerBookingQuestion(question) },
+  'intake.answerQuestion': { latency: 450, run: ({ question, context }) => answerBookingQuestion(question, context) },
   'intake.checkDuplicate': { latency: 0, run: (input) => checkDuplicate(input) }, // a data lookup: never sent to a model
   'assignment.planBatch': { latency: 900, run: () => planMorningBatch() },
   'deliveryStatus.answer': { latency: 500, run: ({ question }) => answer(question) },
@@ -45,7 +45,7 @@ export const agents = {
     checkAddress: (fields, flags) => decide('intake.checkAddress', { fields, flags }),
     screenItem: (description) => decide('intake.screenItem', { description }),
     writeRiderNote: (details) => decide('intake.writeRiderNote', details),
-    answerQuestion: (question) => decide('intake.answerQuestion', { question }),
+    answerQuestion: (question, context = {}) => decide('intake.answerQuestion', { question, context }),
     checkDuplicate: (details) => decide('intake.checkDuplicate', details),
   },
   assignment: {

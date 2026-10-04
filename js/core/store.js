@@ -1,6 +1,6 @@
 // The system of record: bookings, riders and day state. Plain software, no judgement.
 // Agents never import this directly; they go through js/tools/.
-import { SEED_PARCELS, SEED_FLAGGED } from '../data/parcels.js';
+import { SEED_PARCELS, SEED_FLAGGED, SEED_OUTBOUND } from '../data/parcels.js';
 import { RIDERS } from '../data/riders.js';
 import { HUB } from '../data/barangays.js';
 import { clockTime } from './util.js';
@@ -10,7 +10,7 @@ let state;
 
 function initialState() {
   return {
-    parcels: structuredClone([...SEED_PARCELS, ...SEED_FLAGGED]),
+    parcels: structuredClone([...SEED_PARCELS, ...SEED_FLAGGED, ...SEED_OUTBOUND]),
     riders: RIDERS.map((r) => ({ ...r, x: HUB.x, y: HUB.y, queue: [], moving: false })),
     plan: null, // draft assignment plan awaiting dispatcher approval
     phase: 'morning', // morning -> planned -> released -> delivering
@@ -80,6 +80,11 @@ export const store = {
     const out = state.phase === 'delivering';
     rider.queue.push(ref);
     this.updateParcel(ref, { status: out ? 'out' : 'assigned', riderId, flag: null }, out ? 'out for delivery' : 'assigned');
+  },
+
+  /** Hand parcels for other cities to the hub for long-haul. */
+  sendToHub(refs) {
+    refs.forEach((ref) => this.updateParcel(ref, { status: 'outbound' }, 'sent to hub'));
   },
 
   setPhase(phase) { state.phase = phase; this.emit({ type: 'phase' }); },

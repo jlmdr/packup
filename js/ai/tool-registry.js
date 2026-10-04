@@ -1,22 +1,24 @@
 // Tools a live model may call, described as JSON schemas and backed by the same read-only
 // functions the simulated agents use. Nothing here can change a booking.
 import {
-  findNamedBarangays, findPartialBarangays, matchLandmark, findOutsideCoverage, getPastDelivery,
-  hasStreetDetail, listBarangays,
+  findCities, findNamedBarangays, findPartialBarangays, matchLandmark, getPastDelivery,
+  hasStreetDetail, listCities, listBarangays,
 } from '../tools/address-tools.js';
 import { findNotAccepted, findNeedsCare } from '../tools/item-tools.js';
-import { estimateRate } from '../tools/rate-tools.js';
+import { estimateRate, deliveryZone } from '../tools/rate-tools.js';
 import { findParcels, getParcelsForBatch, getAreaOf, findRecentBookings } from '../tools/parcel-tools.js';
 import {
   getAllRiders, getRider, getNeighbourAreas, vehicleFits, vehicleCapacity, getRiderLocation,
 } from '../tools/rider-tools.js';
 
 const text = { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] };
+const textInCity = { type: 'object', properties: { text: { type: 'string' }, city: { type: 'string' } }, required: ['text'] };
+const city = { type: 'object', properties: { city: { type: 'string' } }, required: ['city'] };
 const none = { type: 'object', properties: {} };
 const phone = { type: 'object', properties: { phone: { type: 'string' } }, required: ['phone'] };
 
 const parcelSummary = (p) => ({
-  ref: p.ref, recipient: p.recipient, barangay: p.barangay, area: getAreaOf(p), size: p.size,
+  ref: p.ref, recipient: p.recipient, city: p.city, barangay: p.barangay, area: getAreaOf(p), size: p.size,
   status: p.status, riderId: p.riderId, failReason: p.failReason || null,
   lastEvent: p.history[p.history.length - 1],
 });
@@ -27,16 +29,22 @@ const riderSummary = (r) => ({
 
 const TOOLS = {
   // Address
-  find_named_barangays: { description: 'Barangays fully named in the text, longest first.', input: text, run: ({ text: t }) => findNamedBarangays(t) },
-  find_partial_barangays: { description: 'Barangays that share a partial name in the text, e.g. "Lourdes".', input: text, run: ({ text: t }) => findPartialBarangays(t) },
-  match_landmark: { description: 'A known Angeles City landmark in the text, with its barangay.', input: text, run: ({ text: t }) => matchLandmark(t) },
-  find_outside_coverage: { description: 'A place outside Angeles City coverage mentioned in the text.', input: text, run: ({ text: t }) => findOutsideCoverage(t) },
+  find_cities: { description: 'Cities named in the text, including aliases like "QC".', input: text, run: ({ text: t }) => findCities(t) },
+  find_named_barangays: { description: 'Barangays fully named in the text as { city, barangay }, optionally within one city.', input: textInCity, run: ({ text: t, city: c }) => findNamedBarangays(t, c) },
+  find_partial_barangays: { description: 'Barangays in a city that share a partial name in the text, e.g. "Lourdes".', input: { ...textInCity, required: ['text', 'city'] }, run: ({ text: t, city: c }) => findPartialBarangays(t, c) },
+  match_landmark: { description: 'A known landmark in the text, with its city and barangay.', input: text, run: ({ text: t }) => matchLandmark(t) },
   has_street_detail: { description: 'Whether the text has a house, lot, unit or street detail.', input: text, run: ({ text: t }) => hasStreetDetail(t) },
   get_past_delivery: { description: 'Last successful delivery address for a phone number.', input: phone, run: ({ phone: p }) => getPastDelivery(p) },
-  list_barangays: { description: 'All 33 Angeles City barangays.', input: none, run: () => listBarangays() },
+  list_cities: { description: 'Cities the booking form offers.', input: none, run: () => listCities() },
+  list_barangays: { description: 'Barangays of a city.', input: city, run: ({ city: c }) => listBarangays(c) },
   // Items and rates
   find_not_accepted_items: { description: 'Item policy categories that cannot be carried, found in the description.', input: text, run: ({ text: t }) => findNotAccepted(t).map((r) => r.label) },
   find_care_items: { description: 'Item policy categories that need handling notes, found in the description.', input: text, run: ({ text: t }) => findNeedsCare(t).map(({ label, note, tag }) => ({ label, note, tag })) },
+  delivery_zone: {
+    description: 'Delivery zone between two cities: 0 same city, 1 within Luzon, 2 Visayas or Mindanao.',
+    input: { type: 'object', properties: { fromCity: { type: 'string' }, toCity: { type: 'string' } }, required: ['fromCity', 'toCity'] },
+    run: ({ fromCity, toCity }) => deliveryZone(fromCity, toCity),
+  },
   estimate_rate: {
     description: 'Estimated fee in pesos. zone: 0 same city, 1 within Luzon, 2 Visayas or Mindanao.',
     input: { type: 'object', properties: { kg: { type: 'number' }, zone: { type: 'number', enum: [0, 1, 2] } }, required: ['kg'] },

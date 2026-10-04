@@ -20,16 +20,16 @@ Screens only ever talk to the gateway, and both modes return the same shape. If 
 
 | Capability | Model tier | Tools | Guardrails |
 | --- | --- | --- | --- |
-| `intake.checkAddress` | fast | barangay, landmark, coverage and past-delivery lookups | Barangays must be real Angeles City barangays |
+| `intake.checkAddress` | fast | city, barangay, landmark and past-delivery lookups | Cities and barangays must exist in the lists |
 | `intake.screenItem` | fast | item policy lookups | Tags limited to Battery, Liquid, Food, Fragile |
 | `intake.writeRiderNote` | fast | none | The note must name the barangay |
-| `intake.answerQuestion` | fast | landmark, coverage, rate and item lookups | Form fill only with a real barangay |
+| `intake.answerQuestion` | fast | landmark, city, zone, rate and item lookups | Form fill only with a real city and barangay |
 | `assignment.planBatch` | strong | batch parcels, riders, neighbouring areas, vehicle fit | Every parcel once; available riders only; capacity and vehicle fit respected |
 | `deliveryStatus.answer` | fast | parcel search, rider location | Money, policy and complaints always escalate; parcels must exist; no draft on escalations |
 
 `intake.checkDuplicate` is a data lookup and always runs locally.
 
-Fixed rules never go to a model: field validation, the required barangay, the "too incomplete to deliver" check and the intake review reasons live in `js/core/validation.js`.
+Fixed rules never go to a model: field validation, the required city and barangay, the fee, the "too incomplete to deliver" check and the intake review reasons live in `js/core/validation.js` and `js/core/pricing.js`.
 
 ## Going live
 

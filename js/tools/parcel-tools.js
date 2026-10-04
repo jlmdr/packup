@@ -1,14 +1,20 @@
 // Parcel tools: read-only lookups used by the assignment and delivery status agents.
 import { store } from '../core/store.js';
-import { getBarangay } from './address-tools.js';
+import { getDeliveryAreaBarangay } from './address-tools.js';
+import { DELIVERY_AREA_CITY } from '../data/barangays.js';
 import { normalise, digitsOnly } from '../core/util.js';
 
-/** Parcels booked before the cut-off and cleared for dispatch, plus ones waiting on intake. */
+const inDeliveryArea = (p) => p.city === DELIVERY_AREA_CITY;
+
+/** Parcels for the local riders: cleared for dispatch, plus ones still waiting on intake review. */
 export const getParcelsForBatch = () =>
-  store.get().parcels.filter((p) => p.status === 'ready' || (p.status === 'flagged' && p.flag?.type === 'intake'));
+  store.get().parcels.filter((p) => inDeliveryArea(p) && (p.status === 'ready' || (p.status === 'flagged' && p.flag?.type === 'intake')));
+
+/** Parcels for other cities, ready to hand to the hub for long-haul. */
+export const getOutboundParcels = () => store.get().parcels.filter((p) => !inDeliveryArea(p) && p.status === 'ready');
 
 export const getParcel = (ref) => store.get().parcels.find((p) => p.ref === ref.toUpperCase()) || null;
-export const getAreaOf = (parcel) => getBarangay(parcel.barangay)?.area || null;
+export const getAreaOf = (parcel) => (inDeliveryArea(parcel) ? getDeliveryAreaBarangay(parcel.barangay)?.area || null : null);
 
 /** Find parcels by reference code, phone number, or recipient name inside free text. */
 export function findParcels(query) {
