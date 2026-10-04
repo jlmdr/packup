@@ -1,0 +1,12 @@
+{
+  "name": "packup-poc",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PackUp: AI-first courier operations POC (intake, rider assignment, delivery status agents).",
+  "scripts": {
+    "start": "npx --yes serve -l 3000 .",
+    "start:live": "node server/index.mjs",
+    "start:mock": "AI_PROVIDER=mock node server/index.mjs"
+  },
+  "type": "module"
+}

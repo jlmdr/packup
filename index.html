@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>PackUp — Angeles City branch</title>
+  <meta name="description" content="PackUp: an interactive prototype of an AI-first courier operations platform, with intake, rider assignment and delivery status agents.">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Public+Sans:wght@400;600;700&display=swap">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/screens.css">
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="#book" aria-label="PackUp home">
+      <img src="assets/logo.svg" width="36" height="36" alt="">
+      <span class="brand-name">PackUp</span>
+      <span class="brand-branch">Angeles City<br>branch</span>
+    </a>
+    <nav class="nav" aria-label="Screens">
+      <div class="nav-group">
+        <span class="nav-label">Customer</span>
+        <a href="#book" data-screen="book">Book a parcel</a>
+      </div>
+      <div class="nav-group">
+        <span class="nav-label">Staff</span>
+        <a href="#review" data-screen="review">Intake review <span class="count" data-count="review" hidden></span></a>
+        <a href="#dispatch" data-screen="dispatch">Dispatch <span class="count" data-count="dispatch" hidden></span></a>
+        <a href="#tracking" data-screen="tracking">Tracking</a>
+      </div>
+    </nav>
+    <button class="demo-toggle" type="button" aria-expanded="false" aria-controls="demo-drawer">Demo controls</button>
+  </header>
+
+  <main>
+    <section class="screen" id="screen-book" aria-label="Book a parcel"></section>
+    <section class="screen" id="screen-review" aria-label="Intake review" hidden></section>
+    <section class="screen" id="screen-dispatch" aria-label="Dispatch" hidden></section>
+    <section class="screen" id="screen-tracking" aria-label="Tracking" hidden></section>
+  </main>
+
+  <aside class="drawer" id="demo-drawer" aria-label="Demo controls"></aside>
+  <div class="toasts" aria-live="polite"></div>
+
+  <noscript>PackUp needs JavaScript. Run it with a local server (see README).</noscript>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

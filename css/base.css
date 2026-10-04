@@ -1,0 +1,129 @@
+/* Base: design tokens, reset, typography and a few utilities. */
+
+:root {
+  color-scheme: light; /* The brand is light-only by design. */
+
+  /* Brand */
+  --brand: #0e5e45;               /* forest green */
+  --brand-strong: #0a4734;
+  --accent: #9bd14b;              /* lime, for small highlights only */
+  --accent-ink: #0b3a2b;
+  --kraft: #b98b5e;               /* cardboard, for parcels */
+
+  /* Text and surfaces */
+  --ink: #18241f;
+  --ink-soft: #4b5a54;
+  --ink-faint: #7c8a84;
+  --surface: #ffffff;
+  --surface-muted: #f4f6f5;
+  --line: #dde3e0;
+
+  /* On the brand colour (header, toasts) */
+  --on-brand: #ffffff;
+  --on-brand-muted: rgb(255 255 255 / 72%);
+  --on-brand-faint: rgb(255 255 255 / 25%);
+  --on-brand-hover: rgb(255 255 255 / 8%);
+
+  /* Meaning */
+  --agent: #4f46e5;               /* indigo: every agent speaks in this colour */
+  --agent-soft: #eef0ff;
+  --flag: #b42318;                /* problems, flags, escalations */
+  --flag-soft: #fbe9e7;
+  --ok: #1f8a4c;
+  --warn: #c27a1a;
+
+  /* Delivery areas */
+  --area-north: #3b6fb6;
+  --area-central: #c2417a;
+  --area-east: #c27a1a;
+  --area-west: #16878c;
+
+  /* Type */
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --font-body: 'Public Sans', 'Segoe UI', system-ui, sans-serif;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-base: 15px;
+  --text-lg: 16px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Shape and depth */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+  --shadow-raised: 0 1px 0 rgb(24 36 31 / 6%), 0 6px 18px -10px rgb(24 36 31 / 35%);
+  --ring: 0 0 0 3px rgb(79 70 229 / 25%);
+
+  /* Layers */
+  --z-header: 20;
+  --z-drawer: 30;
+  --z-toast: 40;
+  --header-h: 64px;
+}
+
+/* Area colour, shared by avatars, map markers and legend swatches. */
+[data-area='north'] { --tint: var(--area-north); }
+[data-area='central'] { --tint: var(--area-central); }
+[data-area='east'] { --tint: var(--area-east); }
+[data-area='west'] { --tint: var(--area-west); }
+[data-area='all'] { --tint: var(--kraft); }
+
+/* Reset */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+:root { padding-bottom: env(safe-area-inset-bottom, 0px); }
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--surface);
+  font-variant-numeric: tabular-nums;
+}
+p, dd { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--agent); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+/* Typography */
+h1, h2, h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+h1 { font-size: 34px; }
+h2 { font-size: 24px; }
+h3 { font-size: 18px; }
+
+/* Utilities */
+.muted { color: var(--ink-soft); }
+.small { font-size: var(--text-sm); }
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  h1 { font-size: 28px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

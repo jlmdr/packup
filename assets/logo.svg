@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="PackUp">
+  <path d="M8 22 32 10l24 12v24L32 58 8 46z" fill="#b98b5e"/>
+  <path d="M8 22l24 12 24-12M32 34v24" fill="none" stroke="#8a6440" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M8 22 32 10l24 12-24 12z" fill="#d1a678"/>
+  <path d="M32 46V18m0 0-9 9m9-9 9 9" fill="none" stroke="#9bd14b" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

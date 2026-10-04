@@ -1,0 +1,14 @@
+{
+  "name": "packup-server",
+  "private": true,
+  "type": "module",
+  "description": "Backend proxy for live agent decisions. Not needed for the simulated demo.",
+  "scripts": {
+    "start": "node index.mjs",
+    "start:mock": "AI_PROVIDER=mock node index.mjs"
+  },
+  "optionalDependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.600.0"
+  },
+  "engines": { "node": ">=18" }
+}
